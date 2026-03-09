@@ -202,6 +202,72 @@ export async function ensureCommandResolvable(command: string, cwd: string, env:
   throw new Error(`Command not found in PATH: "${command}"`);
 }
 
+/**
+ * Create a symlink for a directory, using junction points on Windows.
+ * Junction points don't require administrator privileges or Developer Mode.
+ * On Unix systems, a regular symlink is created.
+ *
+ * On Windows, if junction creation fails (e.g., due to permission issues),
+ * this falls back to copying the directory.
+ */
+export async function symlinkDir(target: string, linkPath: string): Promise<void> {
+  if (process.platform === "win32") {
+    // On Windows, try junction points first
+    // Junctions don't require admin privileges or Developer Mode
+    try {
+      const stats = await fs.lstat(linkPath);
+      // If it's already a junction or symlink, skip
+      if (stats.isSymbolicLink()) return;
+      // If it's a directory from a previous run, remove it first
+      if (stats.isDirectory()) {
+        await fs.rm(linkPath, { recursive: true });
+      }
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+    }
+    // Create parent directory only
+    await fs.mkdir(path.dirname(linkPath), { recursive: true });
+
+    try {
+      await fs.symlink(target, linkPath, "junction");
+      return;
+    } catch (err) {
+      // If junction fails (permission issues, etc.), fall back to copying
+      console.warn(`[symlinkDir] Junction failed, falling back to copy: ${(err as Error).message}`);
+    }
+
+    // Fallback: copy directory on Windows
+    await copyDir(target, linkPath);
+  } else {
+    // On Unix, use regular symlinks
+    try {
+      await fs.lstat(linkPath);
+      // Already exists, skip
+      return;
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+    }
+    await fs.symlink(target, linkPath);
+  }
+}
+
+/**
+ * Copy a directory recursively (used as fallback on Windows when junctions fail)
+ */
+async function copyDir(src: string, dest: string): Promise<void> {
+  await fs.mkdir(dest, { recursive: true });
+  const entries = await fs.readdir(src, { withFileTypes: true });
+  for (const entry of entries) {
+    const srcPath = path.join(src, entry.name);
+    const destPath = path.join(dest, entry.name);
+    if (entry.isDirectory()) {
+      await copyDir(srcPath, destPath);
+    } else {
+      await fs.copyFile(srcPath, destPath);
+    }
+  }
+}
+
 export async function runChildProcess(
   runId: string,
   command: string,

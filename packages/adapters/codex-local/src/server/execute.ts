@@ -16,6 +16,7 @@ import {
   ensurePathInEnv,
   renderTemplate,
   runChildProcess,
+  symlinkDir,
 } from "@paperclipai/adapter-utils/server-utils";
 import { parseCodexJsonl, isCodexUnknownSessionError } from "./parse.js";
 
@@ -90,7 +91,7 @@ async function ensureCodexSkillsInjected(onLog: AdapterExecutionContext["onLog"]
     if (existing) continue;
 
     try {
-      await fs.symlink(source, target);
+      await symlinkDir(source, target);
       await onLog(
         "stderr",
         `[paperclip] Injected Codex skill "${entry.name}" into ${skillsHome}\n`,

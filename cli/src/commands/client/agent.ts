@@ -64,6 +64,18 @@ async function resolvePaperclipSkillsDir(): Promise<string | null> {
   return null;
 }
 
+/**
+ * Create a symlink for a directory, using junction points on Windows.
+ */
+async function symlinkDir(target: string, linkPath: string): Promise<void> {
+  if (process.platform === "win32") {
+    await fs.mkdir(linkPath, { recursive: true });
+    await fs.symlink(target, linkPath, "junction");
+  } else {
+    await fs.symlink(target, linkPath);
+  }
+}
+
 async function installSkillsForTarget(
   sourceSkillsDir: string,
   targetSkillsDir: string,
@@ -90,7 +102,7 @@ async function installSkillsForTarget(
     }
 
     try {
-      await fs.symlink(source, target);
+      await symlinkDir(source, target);
       summary.linked.push(entry.name);
     } catch (err) {
       summary.failed.push({

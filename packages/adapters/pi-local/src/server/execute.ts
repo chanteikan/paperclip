@@ -15,6 +15,7 @@ import {
   ensurePathInEnv,
   renderTemplate,
   runChildProcess,
+  symlinkDir,
 } from "@paperclipai/adapter-utils/server-utils";
 import { isPiUnknownSessionError, parsePiJsonl } from "./parse.js";
 import { ensurePiModelConfiguredAndAvailable } from "./models.js";
@@ -74,7 +75,7 @@ async function ensurePiSkillsInjected(onLog: AdapterExecutionContext["onLog"]) {
     if (existing) continue;
 
     try {
-      await fs.symlink(source, target);
+      await symlinkDir(source, target);
       await onLog(
         "stderr",
         `[paperclip] Injected Pi skill "${entry.name}" into ${piSkillsHome}\n`,

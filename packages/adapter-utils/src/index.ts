@@ -21,3 +21,5 @@ export type {
   CLIAdapterModule,
   CreateConfigValues,
 } from "./types.js";
+
+export { symlinkDir } from "./server-utils.js";

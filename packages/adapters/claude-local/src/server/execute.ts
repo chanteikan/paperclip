@@ -26,6 +26,7 @@ import {
   isClaudeMaxTurnsResult,
   isClaudeUnknownSessionError,
 } from "./parse.js";
+import { symlinkDir } from "@paperclipai/adapter-utils";
 
 const __moduleDir = path.dirname(fileURLToPath(import.meta.url));
 const PAPERCLIP_SKILLS_CANDIDATES = [
@@ -55,7 +56,7 @@ async function buildSkillsDir(): Promise<string> {
   const entries = await fs.readdir(skillsDir, { withFileTypes: true });
   for (const entry of entries) {
     if (entry.isDirectory()) {
-      await fs.symlink(
+      await symlinkDir(
         path.join(skillsDir, entry.name),
         path.join(target, entry.name),
       );
